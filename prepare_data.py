@@ -30,7 +30,7 @@ class Resizer:
         self.quality = quality
 
     def get_resized_bytes(self, img):
-        img = trans_fn.resize(img, self.size)
+        img = trans_fn.resize(img, (self.size, self.size))
         buf = BytesIO()
         img.save(buf, format='jpeg', quality=self.quality)
         img_bytes = buf.getvalue()

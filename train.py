@@ -112,7 +112,7 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
     else:
         g_module = generator
         d_module = discriminator
-        
+
     accum = 0.5 ** (32 / (10 * 1000))
 
     sample_z = torch.randn(args.n_sample, args.latent, device=device)
@@ -129,34 +129,52 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
         key = np.random.randint(n_scales)
         real_stack = data[key].to(device)
 
+        # converted: -1~1 grid coord
         real_img, converted = real_stack[:, :3], real_stack[:, 3:]
+        # TODO: real_vid to real_img also xyt coordinate
 
         requires_grad(generator, False)
         requires_grad(discriminator, True)
 
+        # TODO: args.batch * seq_len
         noise = mixing_noise(args.batch, args.latent, args.mixing, device)
 
         fake_img, _ = generator(converted, noise)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
-        fake_pred = discriminator(fake, key)
+        fake_pred = discriminator(fake)
 
         real = real_img if args.img2dis else real_stack
-        real_pred = discriminator(real, key)
-        d_loss = d_logistic_loss(real_pred, fake_pred)
+        real_pred = discriminator(real)
 
+        '''
+        # Video Discrimination
+        vid_fake_pred = vid_discriminator(fake_vid)
+        vid_real_pred = vid_discriminator(real_vid)
+        '''
+        d_loss = d_logistic_loss(real_pred, fake_pred)
+        # vid_d_loss = d_logistic_loss(vid_real_pred, vid_fake_pred)
         loss_dict['d'] = d_loss
         loss_dict['real_score'] = real_pred.mean()
         loss_dict['fake_score'] = fake_pred.mean()
+
+        # loss_dict['real_vid_score'] = vid_real_pred.mean()
+        # loss_dict['fake_vid_score'] = vid_fake_pred.mean()
 
         discriminator.zero_grad()
         d_loss.backward()
         d_optim.step()
 
+        '''
+        vid_discriminator.zero_grad()
+        vid_d_loss.backward()
+        vid_d_optim.step()
+        '''
+
         d_regularize = i % args.d_reg_every == 0
 
         if d_regularize:
             real.requires_grad = True
-            real_pred = discriminator(real, key)
+            real_pred = discriminator(real)
             r1_loss = d_r1_loss(real_pred, real)
 
             discriminator.zero_grad()
@@ -168,17 +186,24 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
 
         requires_grad(generator, True)
         requires_grad(discriminator, False)
+        # requires_grad(vid_discriminator, False)
 
         noise = mixing_noise(args.batch, args.latent, args.mixing, device)
 
         fake_img, _ = generator(converted, noise)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
-        fake_pred = discriminator(fake, key)
+        fake_pred = discriminator(fake)
         g_loss = g_nonsaturating_loss(fake_pred)
 
+        # vid_fake_pred = vid_discriminator(fake_vid)
+        # vid_g_loss = g_nonsaturating_loss(fake_pred)
+
         loss_dict['g'] = g_loss
+        # loss_dict['g_vid'] = vid_g_loss
 
         generator.zero_grad()
+        # total_g_loss = g_loss + vid_g_loss
+        # total_g_loss.backward()
         g_loss.backward()
         g_optim.step()
 
@@ -187,6 +212,7 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
 
         accumulate(g_ema, g_module, accum)
 
+        # TODO: reduce_loss_dict for vid
         loss_reduced = reduce_loss_dict(loss_dict)
 
         d_loss_val = loss_reduced['d'].mean().item()

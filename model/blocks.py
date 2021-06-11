@@ -5,7 +5,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from op import FusedLeakyReLU, fused_leaky_relu, upfirdn2d
+from op import FusedLeakyReLU, fused_leaky_relu, upfirdn2d_native as upfirdn2d
 
 
 class PixelNorm(nn.Module):
@@ -192,6 +192,7 @@ class ModulatedConv2d(nn.Module):
         self.downsample = downsample
 
         if upsample:
+            print('upsample')
             factor = 2
             p = (len(blur_kernel) - factor) - (kernel_size - 1)
             pad0 = (p + 1) // 2 + factor - 1
@@ -200,6 +201,7 @@ class ModulatedConv2d(nn.Module):
             self.blur = Blur(blur_kernel, pad=(pad0, pad1), upsample_factor=factor)
 
         if downsample:
+            print('downsample')
             factor = 2
             p = (len(blur_kernel) - factor) + (kernel_size - 1)
             pad0 = (p + 1) // 2
@@ -347,7 +349,9 @@ class ToRGB(nn.Module):
         super().__init__()
 
         self.upsample = upsample
+        # CUDA
         if upsample:
+            print('ToRGB')
             self.upsample = Upsample(blur_kernel)
 
         self.conv = ModulatedConv2d(in_channel, 3, 1, style_dim, demodulate=False)

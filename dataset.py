@@ -12,7 +12,15 @@ import torch
 import numpy as np
 
 import tensor_transforms as tt
+import os
 
+def format_for_lmdb(*args):
+    key_parts = []
+    for arg in args:
+        if isinstance(arg, int):
+            arg = str(arg).zfill(7)
+        key_parts.append(arg)
+    return '-'.join(key_parts).encode('utf-8')
 
 class MultiScaleDataset(Dataset):
     def __init__(self, path, transform, resolution=256, to_crop=False, crop_size=64, integer_values=False):
@@ -37,7 +45,7 @@ class MultiScaleDataset(Dataset):
             raise IOError('Cannot open lmdb dataset', path)
 
         with self.env.begin(write=False) as txn:
-            self.length = int(txn.get('length'.encode('utf-8')).decode('utf-8'))
+            self.length = int(txn.get(format_for_lmdb('length')).decode('utf-8'))
 
         self.resolution = resolution
         self.transform = transform

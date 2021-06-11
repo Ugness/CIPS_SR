@@ -2,20 +2,14 @@ import os
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 from torch.autograd import Function
 from torch.utils.cpp_extension import load
 
 
 module_path = os.path.dirname(__file__)
-fused = load(
-    'fused',
-    sources=[
-        os.path.join(module_path, 'fused_bias_act.cpp'),
-        os.path.join(module_path, 'fused_bias_act_kernel.cu'),
-    ],
-)
 
-
+'''
 class FusedLeakyReLUFunctionBackward(Function):
     @staticmethod
     def forward(ctx, grad_output, out, negative_slope, scale):
@@ -69,18 +63,22 @@ class FusedLeakyReLUFunction(Function):
 
         return grad_input, grad_bias, None, None
 
+'''
 
+# re-implement it without cuda codes. may be slower
 class FusedLeakyReLU(nn.Module):
     def __init__(self, channel, negative_slope=0.2, scale=2 ** 0.5):
         super().__init__()
 
-        self.bias = nn.Parameter(torch.zeros(channel))
+        self.bias = nn.Parameter(torch.zeros(1, channel, 1, 1))
         self.negative_slope = negative_slope
         self.scale = scale
 
     def forward(self, input):
-        return fused_leaky_relu(input, self.bias, self.negative_slope, self.scale)
+        out = F.leaky_relu(input+self.bias, self.negative_slope)
+        return out * self.scale
 
 
 def fused_leaky_relu(input, bias, negative_slope=0.2, scale=2 ** 0.5):
-    return FusedLeakyReLUFunction.apply(input, bias, negative_slope, scale)
+    out = F.leaky_relu(input+bias, negative_slope)
+    return out * scale
