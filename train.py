@@ -382,7 +382,7 @@ if __name__ == '__main__':
     print('img2dis', args.img2dis, 'dis_input_size', args.dis_input_size)
 
     args.start_iter = 0
-    n_scales = int(math.log(args.size//args.crop, 2)) + 1
+    n_scales = 1
     print('n_scales', n_scales)
 
     generator = Generator(size=args.size, hidden_size=args.fc_dim, style_dim=args.latent, n_mlp=args.n_mlp,
