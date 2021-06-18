@@ -1,6 +1,6 @@
-## CIPS -- Official Pytorch Implementation 
+## CIPS-SR Improving CIPS for Super-Resolution 
 
-of the paper [Image Generators with Conditionally-Independent Pixel Synthesis](https://arxiv.org/abs/2011.13775)
+improving the paper [Image Generators with Conditionally-Independent Pixel Synthesis](https://arxiv.org/abs/2011.13775)
 
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/image-generators-with-conditionally/image-generation-on-lsun-churches-256-x-256)](https://paperswithcode.com/sota/image-generation-on-lsun-churches-256-x-256?p=image-generators-with-conditionally)
 
@@ -9,6 +9,12 @@ of the paper [Image Generators with Conditionally-Independent Pixel Synthesis](h
 ## Requirements
 
 pip install -r requirements.txt
+
+## Usage (CIPS-SR)
+### Training CIPS 64x64
+>python -m torch.distributed.launch --nproc_per_node=8 train.py --n_sample=8 --batch=4 --fid_batch=8 --Generator=CIPSskip --output_dir skip-churches-16-64 --img2dis --num_workers=16 LSUN/church_train_lmdb/64/ --coords_size 64 --crop 64 --size 16
+### Training CIPS-SR 64x64
+>python -m torch.distributed.launch --nproc_per_node=8 train.py --n_sample=8 --batch=4 --fid_batch=8 --Generator=CIPSskip --output_dir skip-churches-64 --img2dis --num_workers=16 LSUN/church_train_lmdb/64/ --coords_size 64 --crop 64 --size 64
 
 ## Usage
 
